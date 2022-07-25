@@ -73,6 +73,7 @@ export const computeAPITree = (serviceNode: ServiceNode, config: ComputeAPITreeC
     title: 'Overview',
     type: 'overview',
     meta: '',
+    deprecated: false,
   });
 
   const operationNodes = serviceNode.children.filter(node => node.type === NodeType.HttpOperation);
@@ -94,6 +95,7 @@ export const computeAPITree = (serviceNode: ServiceNode, config: ComputeAPITreeC
         title: operationNode.name,
         type: operationNode.type,
         meta: operationNode.data.method,
+        deprecated: operationNode.data.deprecated,
       });
     });
 
@@ -108,6 +110,7 @@ export const computeAPITree = (serviceNode: ServiceNode, config: ComputeAPITreeC
           title: operationNode.name,
           type: operationNode.type,
           meta: operationNode.data.method,
+          deprecated: operationNode.data.deprecated,
         };
       });
       if (items.length > 0) {

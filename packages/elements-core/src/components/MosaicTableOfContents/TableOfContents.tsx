@@ -1,7 +1,8 @@
 import { Box, Flex, Icon } from '@stoplight/mosaic';
 import * as React from 'react';
 
-import { VersionBadge } from '../Docs/HttpOperation/Badges';
+import { HttpCodeColor } from '../../constants';
+import { deprecateTitle, VersionBadge } from '../Docs/HttpOperation/Badges';
 import { NODE_META_COLOR, NODE_TYPE_ICON_COLOR, NODE_TYPE_META_ICON, NODE_TYPE_TITLE_ICON } from './constants';
 import {
   CustomLinkComponent,
@@ -30,6 +31,8 @@ export const TableOfContents = React.memo<TableOfContentsProps>(
     const container = React.useRef<HTMLDivElement>(null);
     const child = React.useRef<HTMLDivElement>(null);
 
+    const [schemasHidden, setSchemasHidden] = React.useState<boolean>(true);
+
     React.useEffect(() => {
       const tocHasScrollbar =
         externalScrollbar ||
@@ -52,7 +55,9 @@ export const TableOfContents = React.memo<TableOfContentsProps>(
             <ActiveIdContext.Provider value={activeId}>
               {tree.map((item, key) => {
                 if (isDivider(item)) {
-                  return <Divider key={key} item={item} />;
+                  return (
+                    <Divider setSchemasHidden={setSchemasHidden} schemasHidden={schemasHidden} key={key} item={item} />
+                  );
                 }
 
                 return (
@@ -60,6 +65,7 @@ export const TableOfContents = React.memo<TableOfContentsProps>(
                     key={key}
                     item={item}
                     depth={0}
+                    schemasHidden={schemasHidden}
                     maxDepthOpenByDefault={maxDepthOpenByDefault}
                     onLinkClick={onLinkClick}
                   />
@@ -75,19 +81,42 @@ export const TableOfContents = React.memo<TableOfContentsProps>(
 
 const Divider = React.memo<{
   item: TableOfContentsDivider;
-}>(({ item }) => {
+  schemasHidden: boolean;
+  setSchemasHidden: React.Dispatch<React.SetStateAction<boolean>>;
+}>(({ item, schemasHidden, setSchemasHidden }) => {
   return (
     <Box
       pl={4}
+      pr={4}
       mb={2}
+      h="md"
+      cursor="pointer"
       mt={6}
-      textTransform="uppercase"
-      fontSize="sm"
-      lineHeight="relaxed"
-      letterSpacing="wide"
-      fontWeight="bold"
+      className={item.title == 'Schemas' ? 'hover:sl-bg-canvas-200' : ''}
+      display="flex"
+      alignItems="center"
+      justifyContent="between"
+      onClick={(e: React.MouseEvent) => {
+        if (item.title == 'Schemas') {
+          e.stopPropagation();
+          e.preventDefault();
+          setSchemasHidden(isSchemasHidden => !isSchemasHidden);
+        }
+      }}
     >
-      {item.title}
+      <Box
+        textTransform="uppercase"
+        fontSize="sm"
+        lineHeight="relaxed"
+        letterSpacing="wide"
+        fontWeight="bold"
+        userSelect="none"
+      >
+        {item.title}
+      </Box>
+      {item.title == 'Schemas' && (
+        <Box as={Icon} icon={['fas', schemasHidden ? 'chevron-right' : 'chevron-down']} color="muted" fixedWidth />
+      )}
     </Box>
   );
 });
@@ -96,8 +125,9 @@ const GroupItem = React.memo<{
   depth: number;
   item: TableOfContentsGroupItem;
   maxDepthOpenByDefault?: number;
+  schemasHidden?: boolean;
   onLinkClick?(): void;
-}>(({ item, depth, maxDepthOpenByDefault, onLinkClick }) => {
+}>(({ item, depth, maxDepthOpenByDefault, schemasHidden, onLinkClick }) => {
   if (isExternalLink(item)) {
     return (
       <Box as="a" href={item.url} target="_blank" rel="noopener noreferrer" display="block">
@@ -107,6 +137,9 @@ const GroupItem = React.memo<{
   } else if (isGroup(item) || isNodeGroup(item)) {
     return <Group depth={depth} item={item} maxDepthOpenByDefault={maxDepthOpenByDefault} onLinkClick={onLinkClick} />;
   } else if (isNode(item)) {
+    if (item.type == 'model' && schemasHidden) {
+      return <></>;
+    }
     return (
       <Node
         depth={depth}
@@ -199,8 +232,9 @@ const Item = React.memo<{
   id?: string;
   icon?: React.ReactElement<typeof Icon>;
   meta?: React.ReactNode;
+  deprecated?: boolean;
   onClick?: (e: React.MouseEvent) => void;
-}>(({ depth, isActive, id, title, meta, icon, onClick }) => {
+}>(({ depth, isActive, id, title, meta, icon, deprecated, onClick }) => {
   return (
     <Flex
       id={id}
@@ -213,12 +247,16 @@ const Item = React.memo<{
       align="center"
       userSelect="none"
       onClick={onClick}
-      title={title}
+      title={!deprecated ? title : deprecateTitle}
     >
       {icon}
-
       <Box alignItems="center" flex={1} mr={meta ? 1.5 : undefined} ml={icon && 1.5} textOverflow="truncate">
-        {title}
+        <Box display="flex" alignItems="center">
+          {deprecated && <Box style={{ color: HttpCodeColor[4], fontWeight: '900' }}>!</Box>}
+          <Box style={{ marginInlineStart: deprecated ? '0.5rem' : '0.8rem', opacity: deprecated ? '0.4' : '1' }}>
+            {title}
+          </Box>
+        </Box>
       </Box>
 
       <Flex alignItems="center" fontSize="xs">
@@ -273,6 +311,7 @@ const Node = React.memo<{
           )
         }
         meta={meta}
+        deprecated={item.deprecated}
         onClick={handleClick}
       />
     </Box>

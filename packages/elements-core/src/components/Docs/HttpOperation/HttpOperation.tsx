@@ -1,4 +1,4 @@
-import { Box, Flex, Heading, HStack, useThemeIsDark, VStack } from '@stoplight/mosaic';
+import { Box, CopyButton, Flex, Heading, HStack, useThemeIsDark, VStack } from '@stoplight/mosaic';
 import { withErrorBoundary } from '@stoplight/react-error-boundary';
 import { IHttpOperation } from '@stoplight/types';
 import cn from 'classnames';
@@ -120,14 +120,14 @@ function MethodPathInner({ method, path, chosenServerUrl }: MethodPathProps & { 
 
   const pathElem = (
     <Flex overflowX="hidden">
-      {chosenServerUrl ? (
-        <Box dir="rtl" color="muted" fontSize="lg" textOverflow="truncate" overflowX="hidden">
-          {chosenServerUrl}
-        </Box>
-      ) : null}
-
-      <Box fontSize="lg" fontWeight="semibold" flex={1}>
-        {path}
+      <Box fontSize="lg" flex={1} display="flex" alignItems="center" textOverflow="truncate" overflowX="hidden">
+        <span>
+          {chosenServerUrl && <span style={{ color: 'muted', direction: 'rtl' }}>{chosenServerUrl}</span>}
+          <span style={{ fontWeight: '700' }}>{path}</span>
+        </span>
+      </Box>
+      <Box style={{ marginInlineStart: '0.5rem', minWidth: '3.5rem', display: 'flex', justifyContent: 'end' }}>
+        <CopyButton copyValue={chosenServerUrl + path} />
       </Box>
     </Flex>
   );
