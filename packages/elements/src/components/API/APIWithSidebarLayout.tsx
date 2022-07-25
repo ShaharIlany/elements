@@ -73,14 +73,16 @@ export const APIWithSidebarLayout: React.FC<SidebarLayoutProps> = ({
 
   const sidebar = (
     <>
-      <Flex ml={4} mb={5} alignItems="center">
-        {logo ? (
-          <Logo logo={{ url: logo, altText: 'logo' }} />
-        ) : (
-          serviceNode.data.logo && <Logo logo={serviceNode.data.logo} />
-        )}
-        <Heading size={4}>{serviceNode.name}</Heading>
-      </Flex>
+      <Link to={'/'} className="customizable-header-logo" style={{ cursor: 'pointer' }}>
+        <Flex ml={4} mb={5} alignItems="center">
+          {logo ? (
+            <Logo logo={{ url: logo, altText: 'logo' }} />
+          ) : (
+            serviceNode.data.logo && <Logo logo={serviceNode.data.logo} />
+          )}
+          <Heading size={4}>{serviceNode.name}</Heading>
+        </Flex>
+      </Link>
       <Flex flexGrow flexShrink overflowY="auto" direction="col">
         <TableOfContents tree={tree} activeId={pathname} Link={Link} onLinkClick={handleTocClick} />
       </Flex>
