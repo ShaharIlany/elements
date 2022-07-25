@@ -20,7 +20,7 @@ export const PoweredByLink: React.FC<{
       userSelect="none"
       rel="noopener noreferrer"
     >
-      <Box>
+      <Box className="customizable-powered-by">
         Powered by&nbsp;<strong>IDFCTS</strong>
       </Box>
     </Flex>
