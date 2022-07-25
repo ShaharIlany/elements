@@ -36,6 +36,7 @@ export const SidebarLayout = React.forwardRef<HTMLDivElement, SidebarLayoutProps
             width: `calc((100% - ${maxContentWidth}px) / 2 + ${sidebarWidth}px)`,
             paddingLeft: `calc((100% - ${maxContentWidth}px) / 2)`,
             minWidth: `${sidebarWidth}px`,
+            minHeight: '100vh',
           }}
         >
           {sidebar}
