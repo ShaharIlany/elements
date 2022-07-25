@@ -1,5 +1,4 @@
-import { faBolt } from '@fortawesome/free-solid-svg-icons';
-import { Box, Flex, Icon } from '@stoplight/mosaic';
+import { Box, Flex } from '@stoplight/mosaic';
 import * as React from 'react';
 
 export const PoweredByLink: React.FC<{
@@ -21,10 +20,8 @@ export const PoweredByLink: React.FC<{
       userSelect="none"
       rel="noopener noreferrer"
     >
-      <Box as={Icon} icon={faBolt} mr={1} className="fa-fw" style={{ color: 'rgba(144, 97, 249, 1)' }} />
-
       <Box>
-        powered by&nbsp;<strong>IDFCTS</strong>
+        Powered by&nbsp;<strong>IDFCTS</strong>
       </Box>
     </Flex>
   );
