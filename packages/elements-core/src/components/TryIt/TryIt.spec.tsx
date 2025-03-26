@@ -60,7 +60,7 @@ describe('TryIt', () => {
     const requestInit = fetchMock.mock.calls[0][1]!;
     expect(requestInit.method).toMatch(/^get$/i);
     const headers = new Headers(requestInit.headers);
-    expect(headers.get('Content-Type')).toBe('application/json');
+    expect(headers.get('Content-Type')).toBe(null);
   });
 
   it('uses cors proxy url, if provided', async () => {
@@ -202,7 +202,15 @@ describe('TryIt', () => {
           'limit*',
           'super_duper_long_parameter_name_with_unnecessary_text*',
           'completed',
+          'default_style_items',
           'items',
+          'items_not_exploded',
+          'items_pipes',
+          'items_pipes_not_exploded',
+          'items_spaces',
+          'items_spaces_not_exploded',
+          'nested',
+          'nested_not_exploded',
           'optional_value_with_default',
           'type',
           'value',
@@ -269,6 +277,12 @@ describe('TryIt', () => {
       const typeField = screen.getByLabelText('type');
       chooseOption(typeField, 'another');
 
+      const pairsField = screen.getByLabelText('pairs');
+      userEvent.type(pairsField, '{ "nestedKey": "nestedValue" }');
+
+      const itemsField = screen.getByLabelText('items');
+      userEvent.type(itemsField, '["first", "second"]');
+
       // header param
 
       const accountIdField = screen.getByLabelText('account-id');
@@ -293,6 +307,9 @@ describe('TryIt', () => {
       expect(queryParams.get('value')).toBe('1');
       expect(queryParams.get('type')).toBe('another');
       expect(queryParams.get('optional_value_with_default')).toBeNull();
+      expect(queryParams.get('nestedKey')).toBe('nestedValue');
+      expect(queryParams.get('pairs')).toBeNull();
+      expect(queryParams.getAll('items')).toEqual(['first', 'second']);
       // assert that headers are passed
       const headers = new Headers(fetchMock.mock.calls[0][1]!.headers);
       expect(headers.get('Content-Type')).toBe('application/json');
@@ -705,7 +722,6 @@ describe('TryIt', () => {
           expect.objectContaining({
             method: 'GET',
             headers: {
-              'Content-Type': 'application/json',
               Prefer: 'code=200',
             },
           }),
@@ -714,9 +730,7 @@ describe('TryIt', () => {
           'https://todos.stoplight.io/todos',
           expect.objectContaining({
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: {},
           }),
         ],
       ]);
@@ -743,9 +757,7 @@ describe('TryIt', () => {
           'https://mock-todos.stoplight.io/todos',
           expect.objectContaining({
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: {},
           }),
         ],
       ]);
@@ -806,7 +818,6 @@ describe('TryIt', () => {
         expect.objectContaining({
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             Prefer: 'code=200',
           },
         }),
@@ -1131,18 +1142,18 @@ describe('TryIt', () => {
       const operation1: IHttpOperation = {
         ...basicOperation,
         servers: [
-          { id: '?http-server-a?', name: 'op 1 server a', url: 'http://url-A.com' },
-          { id: '?http-server-b?', name: 'op 1 server b', url: 'http://url-B.com' },
-          { id: '?http-server-c?', name: 'op 1 server c', url: 'http://url-C.com' },
+          { id: '?http-server-a?', description: 'op 1 server a', url: 'http://url-A.com' },
+          { id: '?http-server-b?', description: 'op 1 server b', url: 'http://url-B.com' },
+          { id: '?http-server-c?', description: 'op 1 server c', url: 'http://url-C.com' },
         ],
       };
 
       const operation2: IHttpOperation = {
         ...basicOperation,
         servers: [
-          { id: '?http-server-d?', name: 'op 2 server d', url: 'http://url-D.com' },
-          { id: '?http-server-e?', name: 'op 2 server e', url: 'http://url-E.com' },
-          { id: '?http-server-f?', name: 'op 2 server b', url: 'http://url-B.com' }, // same URL, should preserve this server
+          { id: '?http-server-d?', description: 'op 2 server d', url: 'http://url-D.com' },
+          { id: '?http-server-e?', description: 'op 2 server e', url: 'http://url-E.com' },
+          { id: '?http-server-f?', description: 'op 2 server b', url: 'http://url-B.com' }, // same URL, should preserve this server
         ],
       };
 

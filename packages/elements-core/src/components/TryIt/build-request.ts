@@ -1,7 +1,7 @@
-import { Dictionary, IHttpOperation, IMediaTypeContent } from '@stoplight/types';
+import { Dictionary, HttpParamStyles, IHttpOperation, IMediaTypeContent, IServer } from '@stoplight/types';
 import { Request as HarRequest } from 'har-format';
 
-import { getServerUrlWithDefaultValues, IServer } from '../../utils/http-spec/IServer';
+import { getServerUrlWithDefaultValues } from '../../utils/http-spec/IServer';
 import {
   filterOutAuthorizationParams,
   HttpSecuritySchemeWithValues,
@@ -50,6 +50,75 @@ const getServerUrl = ({
   return serverUrl;
 };
 
+const delimiter = {
+  [HttpParamStyles.Form]: ',',
+  [HttpParamStyles.SpaceDelimited]: ' ',
+  [HttpParamStyles.PipeDelimited]: '|',
+};
+
+export const getQueryParams = ({
+  httpOperation,
+  parameterValues,
+}: Pick<BuildRequestInput, 'httpOperation'> & Pick<BuildRequestInput, 'parameterValues'>) => {
+  const query = httpOperation.request?.query;
+  if (!query) return [];
+
+  return query.reduce<{ name: string; value: string }[]>((acc, param) => {
+    const value = parameterValues[param.name] ?? '';
+    if (value.length === 0) return acc;
+
+    const explode = param.explode ?? true;
+
+    if (param.schema?.type === 'object' && param.style === 'form' && value) {
+      let nested: Dictionary<string, string>;
+      try {
+        nested = JSON.parse(value);
+        if (!(typeof nested === 'object' && nested !== null)) throw Error();
+      } catch (e) {
+        throw new Error(`Cannot use param value "${value}". JSON object expected.`);
+      }
+
+      if (explode) {
+        acc.push(...Object.entries(nested).map(([name, value]) => ({ name, value: value.toString() })));
+      } else {
+        acc.push({
+          name: param.name,
+          value: Object.entries(nested)
+            .map(entry => entry.join(','))
+            .join(','),
+        });
+      }
+    } else if (param.schema?.type === 'array' && value) {
+      let nested: string[];
+      try {
+        const parsed = JSON.parse(value);
+        if (typeof parsed === 'string') {
+          nested = parsed.split(delimiter[param.style]);
+        } else if (Array.isArray(parsed)) {
+          nested = parsed;
+        } else {
+          throw Error();
+        }
+      } catch (e) {
+        throw new Error(`Cannot use param value "${value}". JSON array expected.`);
+      }
+
+      if (explode) {
+        acc.push(...nested.map(value => ({ name: param.name, value: value.toString() })));
+      } else {
+        acc.push({
+          name: param.name,
+          value: nested.join(delimiter[param.style] ?? delimiter[HttpParamStyles.Form]),
+        });
+      }
+    } else {
+      acc.push({ name: param.name, value });
+    }
+
+    return acc;
+  }, []);
+};
+
 export async function buildFetchRequest({
   httpOperation,
   mediaTypeContent,
@@ -63,12 +132,10 @@ export async function buildFetchRequest({
 }: BuildRequestInput): Promise<Parameters<typeof fetch>> {
   const serverUrl = getServerUrl({ httpOperation, mockData, chosenServer, corsProxy });
 
-  const shouldIncludeBody = ['PUT', 'POST', 'PATCH'].includes(httpOperation.method.toUpperCase());
+  const shouldIncludeBody =
+    ['PUT', 'POST', 'PATCH'].includes(httpOperation.method.toUpperCase()) && bodyInput !== undefined;
 
-  const queryParams =
-    httpOperation.request?.query
-      ?.map(param => ({ name: param.name, value: parameterValues[param.name] ?? '' }))
-      .filter(({ value }) => value.length > 0) ?? [];
+  const queryParams = getQueryParams({ httpOperation, parameterValues });
 
   const rawHeaders = filterOutAuthorizationParams(httpOperation.request?.headers ?? [], httpOperation.security)
     .map(header => ({ name: header.name, value: parameterValues[header.name] ?? '' }))
@@ -84,11 +151,14 @@ export async function buildFetchRequest({
 
   const body = typeof bodyInput === 'object' ? await createRequestBody(mediaTypeContent, bodyInput) : bodyInput;
 
+  const acceptedMimeTypes = getAcceptedMimeTypes(httpOperation);
   const headers = {
+    ...(acceptedMimeTypes.length > 0 && { Accept: acceptedMimeTypes.join(', ') }),
     // do not include multipart/form-data - browser handles its content type and boundary
-    ...(mediaTypeContent?.mediaType !== 'multipart/form-data' && {
-      'Content-Type': mediaTypeContent?.mediaType ?? 'application/json',
-    }),
+    ...(mediaTypeContent?.mediaType !== 'multipart/form-data' &&
+      shouldIncludeBody && {
+        'Content-Type': mediaTypeContent?.mediaType ?? 'application/json',
+      }),
     ...Object.fromEntries(headersWithAuth.map(nameAndValueObjectToPair)),
     ...mockData?.header,
   };
@@ -174,12 +244,10 @@ export async function buildHarRequest({
   const serverUrl = getServerUrl({ httpOperation, mockData, chosenServer, corsProxy });
 
   const mimeType = mediaTypeContent?.mediaType ?? 'application/json';
-  const shouldIncludeBody = ['PUT', 'POST', 'PATCH'].includes(httpOperation.method.toUpperCase());
+  const shouldIncludeBody =
+    ['PUT', 'POST', 'PATCH'].includes(httpOperation.method.toUpperCase()) && bodyInput !== undefined;
 
-  const queryParams =
-    httpOperation.request?.query
-      ?.map(param => ({ name: param.name, value: parameterValues[param.name] ?? '' }))
-      .filter(({ value }) => value.length > 0) ?? [];
+  const queryParams = getQueryParams({ httpOperation, parameterValues });
 
   const headerParams =
     httpOperation.request?.headers?.map(header => ({ name: header.name, value: parameterValues[header.name] ?? '' })) ??
@@ -187,6 +255,15 @@ export async function buildHarRequest({
 
   if (mockData?.header) {
     headerParams.push({ name: 'Prefer', value: mockData.header.Prefer });
+  }
+
+  if (shouldIncludeBody) {
+    headerParams.push({ name: 'Content-Type', value: mimeType });
+  }
+
+  const acceptedMimeTypes = getAcceptedMimeTypes(httpOperation);
+  if (acceptedMimeTypes.length > 0) {
+    headerParams.push({ name: 'Accept', value: acceptedMimeTypes.join(', ') });
   }
 
   const [queryParamsWithAuth, headerParamsWithAuth] = runAuthRequestEhancements(auth, queryParams, headerParams);
@@ -221,7 +298,7 @@ export async function buildHarRequest({
     url: urlObject.href,
     httpVersion: 'HTTP/1.1',
     cookies: [],
-    headers: [{ name: 'Content-Type', value: mimeType }, ...headerParamsWithAuth],
+    headers: headerParamsWithAuth,
     queryString: queryParamsWithAuth,
     postData: postData,
     headersSize: -1,
@@ -236,4 +313,16 @@ function uriExpand(uri: string, data: Dictionary<string, string>) {
   return uri.replace(/{([^#?]+?)}/g, (match, value) => {
     return data[value] || value;
   });
+}
+
+export function getAcceptedMimeTypes(httpOperation: IHttpOperation): string[] {
+  return Array.from(
+    new Set(
+      httpOperation.responses.flatMap(response =>
+        response === undefined || response.contents === undefined
+          ? []
+          : response.contents.map(contentType => contentType.mediaType),
+      ),
+    ),
+  );
 }
