@@ -1,0 +1,13 @@
+.back-home-button {
+    font-size: x-small;
+    width: fit-content;
+    margin-bottom: 1em;
+    margin-left: 0.5em;
+}
+.back-home-button:hover {
+    color: #2c97ff;
+    cursor: pointer;
+}
+.back-icon {
+    margin-right: 0.35em;
+}

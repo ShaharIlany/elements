@@ -1,3 +1,5 @@
+import './styles.css';
+
 import {
   ExportButtonProps,
   Logo,
@@ -73,6 +75,10 @@ export const APIWithSidebarLayout: React.FC<SidebarLayoutProps> = ({
 
   const sidebar = (
     <>
+      <a href="/" className="back-home-button">
+        <span className="back-icon">&#8592;</span>
+        Home
+      </a>
       <Link to={'/'} className="customizable-header-logo" style={{ cursor: 'pointer' }}>
         <Flex ml={4} mb={5} alignItems="center">
           {logo ? (
