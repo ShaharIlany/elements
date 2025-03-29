@@ -27,6 +27,7 @@ const HttpOperationComponent = React.memo<HttpOperationProps>(
 
     const mocking = React.useContext(MockingContext);
     const isDeprecated = !!data.deprecated;
+    const showTryIt = data.extensions && 'x-showTryIt' in data.extensions && !!data.extensions['x-showTryIt'];
     const isInternal = !!data.internal;
 
     const [responseMediaType, setResponseMediaType] = React.useState('');
@@ -71,7 +72,7 @@ const HttpOperationComponent = React.memo<HttpOperationProps>(
       </VStack>
     );
 
-    const tryItPanel = !layoutOptions?.hideTryItPanel && (
+    const tryItPanel = showTryIt && !layoutOptions?.hideTryItPanel && (
       <TryItWithRequestSamples
         httpOperation={data}
         responseMediaType={responseMediaType}
